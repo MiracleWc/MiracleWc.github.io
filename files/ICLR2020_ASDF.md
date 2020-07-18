@@ -1,0 +1,49 @@
+﻿@[TOC](论文阅读ICLR2020《ADAPTIVE STRUCTURAL FINGERPRINTS FOR GRAPH ATTENTION NETWORKS》)
+
+## 摘要
+
+**观点**：如何利用注意力机制中的丰富的结构信息
+               **针对问题**：增加高阶邻居的注意范围会对性能产生负面影响，过平滑风险
+               本文提出“Adaptive structure Fingerprints”ADSF模型，充分利用图像注意网络中的拓扑结构。
+               关键是学习 用一种**可加权的、可学习的接受域**对每个节点进行 contextualize
+
+## 确定节点相似性时图的结构
+![节点结构对节点相似性的影响](https://img-blog.csdnimg.cn/20200718183152657.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3OTA4Njcw,size_16,color_FFFFFF,t_70#pic_center)
+
+ 1. 图1a，假设基于内容相似性（A，B）与（A，C)同样相似。但基于结构B比C于A更相似，因为B于A同处于同一个小型的、紧密相连的community，有很大一部分共同邻居
+ 2. 图1b，A于B不直接相连，在GAT中A和B不直接影响，但A和B共同连接于同一个community，且B连接于community hub，因此A 和 B 直接影响是合理的
+
+## Adaptive Structural Fingprients（ADSF）
+利用结构信息的关键是构造所谓的“Adaptive Structural Fingprients”，将每个节点置于其局部“receptive field”的上下文 中。
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200718184917910.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3OTA4Njcw,size_16,color_FFFFFF,t_70#pic_center)
+取每个节点的K-hops邻居节点作为该节点的子图，表示形式为(V~i~; E~i~)。则通过该子图结构，为每个节点重新加权，作为structural fingerprint：F~i~ = (V~i~; w~i~).
+
+加权方式有两种：
+
+    1. Gaussian function of its distance from the center node
+    2. Random Walk with Restart (RWR)
+**Gaussian function of its distance from the center node**
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200718190148654.png#pic_center)
+**Random Walk with Restart (RWR)**
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200718190438343.png#pic_center)
+*公式推导请参考原文*
+
+作者对于这两种方法进行比较：
+![在这里插入图片描述](https://img-blog.csdnimg.cn/2020071819064733.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3OTA4Njcw,size_16,color_FFFFFF,t_70#pic_center)
+上图可以看出两种方法权重可视化后，RWR更能反映样本的结构关系。
+## 模型介绍
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200718190837455.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3OTA4Njcw,size_16,color_FFFFFF,t_70#pic_center)
+作者模型设计过程可以由下图公式解释：
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200718190938500.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3OTA4Njcw,size_16,color_FFFFFF,t_70#pic_center)
+其中e~ij~的计算为相似性计算，s~ij~计算为weighted Jacard similarity，然后分别对于两种相似度进行Softmax归一化后，计算联合注意力。最终Massage Passing节点状态更新采用注意力加权方式。
+## 结果分析
+![引文数据结果比较](https://img-blog.csdnimg.cn/20200718191359995.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3OTA4Njcw,size_16,color_FFFFFF,t_70#pic_center)
+上述结果可以看出，增加结构信息注意力后，模型的效果有明显的提升。
+同时作者也对于模型的k-hops中的参数k，RWR中的参数c以及节点加权方式进行比较。可以看出在k=2.即节点选取2阶邻域作为子图结构时，模型效果最好。
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200718191520496.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM3OTA4Njcw,size_16,color_FFFFFF,t_70#pic_center)
+## 原作CONCLUSION AND FUTURE WORK
+  在这项工作中，我们提出了一个自适应的结构指纹模型来编码复杂的拓扑和结构信息，以改善图形表示学习。在未来，我们将考虑不同的指纹参数（例如衰变轮廓），而不是在所有节点之间共享这些参数；我们将考虑将我们的方法应用于图划分和社区检测，其中节点特征可能不可用，而图结构将是可以探索的主要信息源；我们还将扩展我们的方法来解决具有挑战性的图分类问题。在理论方面，我们将借鉴现有的半监督学习工具，研究半监督节点嵌入和分类方法的泛化性能。
+## 论文
+  论文地址：https://openreview.net/forum?id=BJxWx0NYPr
+  代码地址：https://github.com/AvigdorZ/ADaptive-Structural-Fingerprint
+  
